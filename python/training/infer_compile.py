@@ -8,7 +8,7 @@ from mel.mel_bridge import english_to_mel
 from mel.mel_validate import validate_obj
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-MODEL_DIR = REPO_ROOT / "wave_small_mel"
+MODEL_DIR = REPO_ROOT / "wave_small_mel_align"
 SYS_PREFIX = "<mel_json>"
 SYS_SUFFIX = "</mel_json>"
 
