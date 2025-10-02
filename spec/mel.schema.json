@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MEL v1 minimal",
+  "type": "object",
+  "required": ["type"],
+  "properties": {
+    "type": { "type": "string", "enum": ["TASK_REQUEST", "TASK_RESULT"] },
+    "task": {
+      "type": "object",
+      "required": ["task_id", "intent", "inputs", "expected", "constraints"],
+      "properties": {
+        "task_id": { "type": "string" },
+        "intent": {
+          "type": "string",
+          "enum": ["qa", "classify", "summarize", "detect", "generate.image", "generate.audio"]
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "type": "string" },
+              "lang": { "type": "string" },
+              "mime": { "type": "string" },
+              "value": {},
+              "handle": { "type": "string" },
+              "size": {
+                "type": "array",
+                "items": { "type": "integer" },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        },
+        "expected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": { "type": "string" },
+              "schema": { "type": "string" },
+              "mime": { "type": "string" },
+              "size": {
+                "type": "array",
+                "items": { "type": "integer" },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "properties": {
+            "max_latency_ms": { "type": "integer" },
+            "max_mem_mb": { "type": "integer" },
+            "max_tokens": { "type": "integer" },
+            "deterministic": { "type": "boolean" },
+            "device_pref": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "privacy": { "type": "string" },
+            "redaction": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "hints": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "task_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["ok", "error", "partial"] },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string" },
+          "value": {},
+          "handle": { "type": "string" }
+        }
+      }
+    },
+    "metrics": { "type": "object", "additionalProperties": true },
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "msg": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

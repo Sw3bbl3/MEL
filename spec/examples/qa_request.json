@@ -1,0 +1,20 @@
+{
+  "type": "TASK_REQUEST",
+  "task": {
+    "task_id": "Q-001",
+    "intent": "qa",
+    "inputs": [
+      { "name": "text", "kind": "text", "lang": "en", "value": "What is the tallest mountain in Europe?" }
+    ],
+    "expected": [
+      { "name": "answer", "kind": "text" }
+    ],
+    "constraints": {
+      "max_latency_ms": 200,
+      "max_tokens": 128,
+      "device_pref": ["NPU", "CPU"],
+      "deterministic": true
+    },
+    "hints": { "temperature": 0.1, "seed": 42 }
+  }
+}

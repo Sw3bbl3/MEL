@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mel"
+version = "0.0.1"
+description = "Model Exchange Language for local multi-model systems"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Sw3bbl3/mel"
+
+[tool.setuptools.packages.find]
+where = ["python"]
