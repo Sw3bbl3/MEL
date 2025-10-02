@@ -17,3 +17,5 @@ Homepage = "https://github.com/Sw3bbl3/mel"
 where = ["python"]
 [tool.setuptools.package-data]
 mel = ["data/*.json"]
+[project.scripts]
+mel-lint = "mel.cli:main"
