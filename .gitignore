@@ -7,6 +7,25 @@ dist/
 build/
 *.egg-info/
 
+# Training artifacts
+wave_small_mel*/
+wave_small_mel/
+mel_pairs_squad/
+gpt2_mel_tok/
+python/training/checkpoints*/
+checkpoint-*/
+
+# Model binaries
+*.safetensors
+*.bin
+
+# Logs/cache
+logs/
+wandb/
+*.log
+*.cache/
+cache/
+
 # VS Code
 .vscode/
 
