@@ -1,16 +1,10 @@
-{
+﻿{
   "type": "TASK_REQUEST",
   "task": {
     "task_id": "V-101",
     "intent": "detect",
     "inputs": [
-      {
-        "name": "image",
-        "kind": "image.handle",
-        "handle": "shm://buf/0x7f200000/1",
-        "mime": "image/jpeg",
-        "size": [1920, 1080]
-      }
+      { "name": "image", "kind": "image.handle", "handle": "shm://buf/0x7f200000/1", "mime": "image/jpeg", "size": [1920,1080] }
     ],
     "expected": [
       { "name": "boxes", "kind": "bbox[]", "schema": "xywh+label+score" }

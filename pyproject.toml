@@ -15,3 +15,5 @@ Homepage = "https://github.com/Sw3bbl3/mel"
 
 [tool.setuptools.packages.find]
 where = ["python"]
+[tool.setuptools.package-data]
+mel = ["data/*.json"]
