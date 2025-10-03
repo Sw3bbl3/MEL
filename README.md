@@ -1,5 +1,9 @@
 # MEL - Model Exchange Language
 
+<p align="center">
+  <img src="assets/MEL_Small.png" alt="MEL Logo" width="200"/>
+</p>
+
 MEL is a compact protocol for on-device multi-model systems. It defines a small, typed message set that lets a router send tasks to models and receive structured results with tight latency and memory budgets.
 
 - Local first
