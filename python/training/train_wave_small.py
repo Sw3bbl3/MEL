@@ -45,7 +45,6 @@ TOK_PATH  = REPO_ROOT / "gpt2_mel_tok"
 BASE_MODEL = "gpt2"
 OUT_DIR   = REPO_ROOT / "wave_small_mel"
 
-
 def format_example(tok, ex):
     prompt = ex["input_text"] + "\n"
     target = ex["target_text"]
@@ -57,7 +56,12 @@ def format_example(tok, ex):
     return ids
 
 def main():
-    tok = AutoTokenizer.from_pretrained(str(TOK_PATH))
+    if not TOK_PATH.exists():
+        raise FileNotFoundError(f"Tokenizer directory not found: {TOK_PATH}. Run prep_tokenizer.py first.")
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(f"Dataset directory not found: {DATA_PATH}. Run build_dataset.py first.")
+
+    tok = AutoTokenizer.from_pretrained(str(TOK_PATH), local_files_only=True)
     # GPT-2 has no pad token by default
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
