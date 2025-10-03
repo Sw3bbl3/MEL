@@ -83,4 +83,4 @@ MEL is released under the [MIT license](LICENSE).
 
 ---
 
-<p align="center"> <img src="assets/MEL_Small.png" alt="MEL Logo" width="240"/><br/> <i>Model Exchange Language – a foundation for reliable multi-model systems.</i> </p> ```
+<p align="center"> <img src="assets/MEL_Small.png" alt="MEL Logo" width="240"/><br/> <i>Model Exchange Language – a foundation for reliable multi-model systems.</i> </p>
