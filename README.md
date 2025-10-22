@@ -14,13 +14,13 @@
 
 MEL defines a minimal, typed message schema that allows a router to dispatch tasks to multiple models and receive structured results with strict latency and memory guarantees.
 
-Key principles:
+### Features
 
-- Local-first execution
-- Deterministic message shapes
-- JSON for logging and testing
-- Binary planned for production runtime
-- Lightweight adapters so any model can integrate with MEL
+- 💡 **Typed Python models** for building and validating MEL requests/results.
+- 🧠 **Configurable multi-agent runtime** with deterministic rule agents, optional Hugging Face generation, and sliding-window conversation memory.
+- 🛠️ **Command line tooling** for linting schemas, launching the reference router, and sending ad-hoc tasks.
+- 🧾 **Schema-first design** with JSON/TOML configuration support.
+- ⚙️ **Extensible agent registry** so integrators can plug in on-device models or custom business logic.
 
 ---
 
@@ -48,12 +48,26 @@ python -m mel.mel_validate spec/examples/qa_request.json
 python python/examples/round_trip_demo.py
 ```
 
+### Launch the reference router
+```bash
+python -m mel.cli serve --host 0.0.0.0 --port 8089
+# or provide a custom runtime configuration (JSON/TOML)
+python -m mel.cli serve --config python/examples/router_config.toml
+```
+
+### Send a request via CLI
+```bash
+python -m mel.cli send "What is the tallest mountain in Europe?"
+```
+
 ---
 
 ## Repository Structure
 ```bash
 mel/
  ├── python/          # Python package and runtime
+ │   ├── mel/         # Library modules, runtime, CLI
+ │   └── examples/    # Router configs, integration demos
  ├── spec/            # MEL JSON schema and protocol examples
  ├── assets/          # Logos, diagrams, visual references
  ├── examples/        # Demo scripts and reference flows
@@ -68,6 +82,8 @@ mel/
 - Native adapters in C++ and Rust
 - Deeper integration with ML runtimes (PyTorch, TensorFlow, ONNX)
 - Extended compliance and benchmark suite
+- Richer agent catalog (retrieval-augmented QA, tool calling)
+- Streaming transport bindings (gRPC/WebSocket)
 
 ---
 
