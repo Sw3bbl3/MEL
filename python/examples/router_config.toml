@@ -1,0 +1,25 @@
+[conversation_memory]
+window = 8
+
+[[agents]]
+type = "rules"
+name = "custom.rules"
+priority = 80
+intents = ["qa", "chat"]
+
+  [[agents.rules]]
+  name = "weather"
+  response = "I'm a local demo agent and cannot fetch live weather, but it's always sunny in MEL-land!"
+  intent = "chat"
+  match.contains_any = ["weather", "forecast"]
+
+  [[agents.rules]]
+  name = "elbrus"
+  response = "Mount Elbrus, 5,642 m"
+  intent = "qa"
+  match.contains_any = ["tallest", "mountain", "europe"]
+
+[[agents]]
+type = "echo"
+name = "fallback.echo"
+priority = 1

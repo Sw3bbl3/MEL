@@ -1,213 +1,108 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import json, re, os, threading, time
-from collections import deque
-from mel.mel_validate import validate_obj
-import errno
+"""Reference HTTP server exposing the MEL runtime."""
 
-# ====== Lightweight conversation memory (per-process, single-client) ======
-CONTEXT = deque(maxlen=6)  # store last 6 turns (user/assistant lines)
+from __future__ import annotations
 
-# ====== Tiny rules registry — you can expand this over time ======
-REGISTRY = {
-    "qa": {"name": "router.gen.v1", "device": "CPU", "latency_p50_ms": 40},
-    "chat": {"name": "router.gen.v1", "device": "CPU", "latency_p50_ms": 40},
-}
+import json
+import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, Mapping, Optional
 
-# ====== Lazy HF generator ======
-_GEN_LOCK = threading.Lock()
-_GEN_PIPE = None
+from .runtime import RouterRuntime
 
-def _get_generator():
-    """
-    Lazily load a small local model.
-    Defaults to TinyLlama 1.1B chat. Runs on CPU; faster with GPU.
-    You can override via HF_MODEL env var.
-    """
-    global _GEN_PIPE
-    if _GEN_PIPE is not None:
-        return _GEN_PIPE
 
-    with _GEN_LOCK:
-        if _GEN_PIPE is not None:
-            return _GEN_PIPE
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8089
 
-        import torch
-        from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 
-        model_id = os.environ.get("HF_MODEL", "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
-        device = 0 if torch.cuda.is_available() else -1
-        torch.set_num_threads(max(1, os.cpu_count() // 2))
+class RouterHTTPServer(ThreadingHTTPServer):
+    def __init__(self, server_address, RequestHandlerClass, *, runtime: RouterRuntime):
+        super().__init__(server_address, RequestHandlerClass)
+        self.runtime = runtime
 
-        tok = AutoTokenizer.from_pretrained(model_id)
-        model = AutoModelForCausalLM.from_pretrained(
-            model_id,
-            torch_dtype=(torch.float16 if torch.cuda.is_available() else torch.float32),
-            device_map=("auto" if torch.cuda.is_available() else None)
-        )
 
-        _GEN_PIPE = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tok,
-            device=device
-        )
-        return _GEN_PIPE
+class RouterRequestHandler(BaseHTTPRequestHandler):
+    server: RouterHTTPServer  # type: ignore[assignment]
 
-# ====== Helpers ======
-def _simple_answer_rules(q_lower: str) -> str | None:
-    # demo fact
-    if "tallest" in q_lower and "europe" in q_lower:
-        return "Mount Elbrus, 5,642 m"
+    def log_message(self, fmt: str, *args: Any) -> None:  # pragma: no cover - verbosity control
+        if os.environ.get("MEL_QUIET", "0") == "1":
+            return
+        super().log_message(fmt, *args)
 
-    # capitals
-    m = re.search(r"\bcapital\s+of\s+([a-z\s\-]+)\??", q_lower)
-    if m:
-        country = " ".join(m.group(1).strip().replace("-", " ").split())
-        capitals = {
-            "france": "Paris",
-            "spain": "Madrid",
-            "germany": "Berlin",
-            "italy": "Rome",
-            "united kingdom": "London",
-            "uk": "London",
-            "england": "London",
-            "united states": "Washington, D.C.",
-            "usa": "Washington, D.C.",
-            "canada": "Ottawa",
-            "australia": "Canberra",
-            "japan": "Tokyo",
-            "china": "Beijing",
-            "india": "New Delhi",
-            "mexico": "Mexico City",
-            "brazil": "Brasília",
-            "russia": "Moscow",
-            "south africa": "Pretoria (administrative)",
-            "egypt": "Cairo",
-        }
-        return capitals.get(country)
-
-    # small-talk heuristic
-    if q_lower in {"hi", "hello", "hey"} or q_lower.startswith(("hi ", "hello ", "hey ")):
-        return "Hi! How can I help?"
-
-    return None
-
-def _generate_open(q: str) -> str:
-    # Short, helpful, neutral tone. A tiny system prompt helps guide the small model.
-    system = (
-        "You are an advanced conversational assistant. "
-        "Be natural, clear, and engaging. "
-        "Give helpful, accurate answers. "
-        "Keep your tone friendly but professional. "
-        "Support multi-turn conversation smoothly."
-    )
-
-    # Pack recent context
-    ctx_lines = []
-    for role, text in CONTEXT:
-        prefix = "User:" if role == "user" else "Assistant:"
-        ctx_lines.append(f"{prefix} {text}")
-
-    prompt = system + "\n\n" + "\n".join(ctx_lines + [f"User: {q}", "Assistant:"])
-
-    pipe = _get_generator()
-    out = pipe(
-        prompt,
-        max_new_tokens=192,
-        do_sample=True,
-        temperature=0.7,
-        top_p=0.9,
-        repetition_penalty=1.1,
-        eos_token_id=pipe.tokenizer.eos_token_id,
-        pad_token_id=pipe.tokenizer.eos_token_id,
-    )[0]["generated_text"]
-
-    # Extract the assistant part after the last "Assistant:"
-    pos = out.rfind("Assistant:")
-    ans = out[pos + len("Assistant:"):].strip() if pos >= 0 else out.strip()
-    # keep it compact
-    return ans.split("\n\n")[0].strip()
-
-def handle_task(task: dict) -> dict:
-    intent = (task.get("intent") or "qa").strip().lower()
-    text = (task.get("inputs", [{}])[0].get("value") or "").strip()
-    q_lower = text.lower()
-
-    # 1) fast rules
-    ruled = _simple_answer_rules(q_lower)
-    if ruled:
-        answer = ruled
-    else:
-        # 2) generative fallback (chatty, general knowledge)
-        answer = _generate_open(text)
-
-    # update context for multi-turn feel
-    CONTEXT.append(("user", text))
-    CONTEXT.append(("assistant", answer))
-
-    return {
-        "type": "TASK_RESULT",
-        "task_id": task.get("task_id", "T-unknown"),
-        "status": "ok",
-        "outputs": [{"name": "answer", "kind": "text", "value": answer}],
-        "metrics": {"latency_ms": 35}  # rough placeholder
-    }
-
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    # ------------------------------------------------------------------
+    # GET endpoints
+    # ------------------------------------------------------------------
+    def do_GET(self) -> None:
         if self.path == "/healthz":
-            self.send_response(200); self.end_headers(); self.wfile.write(b"ok")
+            self._send_json(200, {"status": "ok"})
+        elif self.path == "/v1/state":
+            self._send_json(200, self.server.runtime.export_state())
         else:
-            self.send_response(405); self.end_headers()
+            self._send_json(404, {"error": "not_found"})
 
-    def do_POST(self):
+    # ------------------------------------------------------------------
+    # POST endpoint for tasks
+    # ------------------------------------------------------------------
+    def do_POST(self) -> None:
+        if self.path not in {"/", "/v1/task"}:
+            self._send_json(404, {"error": "not_found"})
+            return
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length)
         try:
-            n = int(self.headers.get("Content-Length", "0"))
-            raw = self.rfile.read(n)
-            req = json.loads(raw.decode("utf-8"))
-            if req.get("type") != "TASK_REQUEST":
-                self.send_response(400); self.end_headers(); return
-            task = req.get("task", {})
-            if not validate_obj({"type": "TASK_REQUEST", "task": task}):
-                self.send_response(422); self.end_headers(); return
+            payload = json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError:
+            self._send_json(400, {"error": "invalid_json"})
+            return
 
-            res = handle_task(task)
-            out = json.dumps(res).encode("utf-8")
+        try:
+            result = self.server.runtime.handle(payload)
+        except ValueError as exc:
+            self._send_json(422, {"error": "invalid_request", "detail": str(exc)})
+            return
 
-            try:
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(out)))
-                self.end_headers()
-                self.wfile.write(out)
-            except (BrokenPipeError, ConnectionAbortedError, OSError) as e:
-                # Client went away; don't try to send another response
-                # (silently drop to avoid server traceback)
-                return
-        except Exception:
-            # If we got here, only try to answer if the socket is still alive
-            try:
-                self.send_response(500); self.end_headers()
-            except Exception:
-                pass
+        self._send_json(200, result.to_dict())
 
-def main(host="127.0.0.1", port=8089):
-    # Warm up model so first request isn't slow
-    try:
-        pipe = _get_generator()
-        _ = pipe("Assistant: Hello", max_new_tokens=4, do_sample=False)  # tiny warmup
-        print("Generator warmed up.")
-    except Exception as e:
-        print(f"Warmup failed (continuing): {e}")
+    # ------------------------------------------------------------------
+    def _send_json(self, status: int, payload: Mapping[str, Any]) -> None:
+        data = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
-    srv = HTTPServer((host, port), Handler)
+
+def create_server(
+    host: str = DEFAULT_HOST,
+    port: int = DEFAULT_PORT,
+    *,
+    runtime: Optional[RouterRuntime] = None,
+) -> RouterHTTPServer:
+    runtime = runtime or RouterRuntime.with_defaults()
+    return RouterHTTPServer((host, port), RouterRequestHandler, runtime=runtime)
+
+
+def main(
+    host: str = DEFAULT_HOST,
+    port: int = DEFAULT_PORT,
+    *,
+    runtime: Optional[RouterRuntime] = None,
+    config: Optional[str] = None,
+) -> None:
+    if runtime is None:
+        runtime = RouterRuntime.from_config_file(config) if config else RouterRuntime.with_defaults()
+    server = create_server(host, port, runtime=runtime)
     print(f"MEL router listening on http://{host}:{port}")
     try:
-        srv.serve_forever()
-    except KeyboardInterrupt:
+        server.serve_forever()
+    except KeyboardInterrupt:  # pragma: no cover - manual shutdown
         pass
 
-if __name__ == "__main__":
-    host = os.environ.get("MEL_HOST", "127.0.0.1")
-    port = int(os.environ.get("MEL_PORT", "8089"))
-    main(host, port)
+
+__all__ = [
+    "create_server",
+    "main",
+    "RouterHTTPServer",
+    "RouterRequestHandler",
+]
+

@@ -2,7 +2,7 @@
 import json
 import threading
 import time
-import requests
+import urllib.request
 
 from mel.router_server import main as start_router  # ← key fix
 
@@ -15,8 +15,9 @@ def _wait_for_server(port: int, tries: int = 40, delay: float = 0.1):
     # If you added /healthz in the server, ping it; otherwise just wait briefly
     for _ in range(tries):
         try:
-            requests.get(f"http://127.0.0.1:{port}/healthz", timeout=0.2)
-            return True
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=0.2) as resp:
+                if resp.status == 200:
+                    return True
         except Exception:
             time.sleep(delay)
     return False
@@ -55,9 +56,15 @@ def test_router_qa_roundtrip():
         },
     }
 
-    r = requests.post(f"http://127.0.0.1:{port}", json=req, timeout=2)
-    assert r.ok
-    res = r.json()
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}",
+        data=json.dumps(req).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=2) as resp:
+        assert resp.status == 200
+        res = json.loads(resp.read().decode("utf-8"))
     assert res["type"] == "TASK_RESULT"
     assert res["status"] == "ok"
     outs = {o["name"]: o["value"] for o in res["outputs"]}

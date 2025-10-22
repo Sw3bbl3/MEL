@@ -18,4 +18,5 @@ where = ["python"]
 [tool.setuptools.package-data]
 mel = ["data/*.json"]
 [project.scripts]
+mel = "mel.cli:main"
 mel-lint = "mel.cli:main"

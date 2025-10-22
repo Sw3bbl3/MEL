@@ -12,7 +12,7 @@
         "task_id": { "type": "string" },
         "intent": {
           "type": "string",
-          "enum": ["qa", "classify", "summarize", "detect", "generate.image", "generate.audio"]
+          "enum": ["qa", "chat", "classify", "summarize", "detect", "generate.image", "generate.audio"]
         },
         "inputs": {
           "type": "array",
