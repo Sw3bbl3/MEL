@@ -35,6 +35,15 @@ $(VENV_STAMP): | $(STAMP_DIR)
 	@echo "Creating virtual environment in $(VENV_DIR)..."
 	@$(PYTHON) -m venv $(VENV_DIR)
 	@$(PYTHON_BIN) -m pip install --upgrade pip
+ifeq ($(OS),Windows_NT)
+	@echo Virtual environment ready.
+	@echo Activate in PowerShell with: .venv\Scripts\Activate.ps1
+	@echo Activate in cmd.exe with: .venv\Scripts\activate.bat
+else
+	@echo "Virtual environment ready."
+	@echo "Activate with: source .venv/bin/activate"
+endif
+	@echo "Install dependencies with: make deps"
 	@$(PYTHON) -c "import pathlib; pathlib.Path(r\"$@\").touch()"
 
 venv: $(VENV_STAMP) ## Create the local Python virtual environment with the latest pip.
