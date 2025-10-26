@@ -6,6 +6,7 @@ PYTHON ?= python3
 VENV_DIR ?= .venv
 
 ifeq ($(OS),Windows_NT)
+  PYTHON := python
   PYTHON_BIN := $(VENV_DIR)/Scripts/python.exe
   PIP_BIN := $(VENV_DIR)/Scripts/pip.exe
 else
@@ -22,10 +23,7 @@ DEPS_STAMP := $(STAMP_DIR)/deps.stamp
 .PHONY: help venv deps install test lint check clean distclean
 
 help: ## Show this help message with available targets.
-	@echo "Usage: make <target>" \
-	  && echo "" \
-	  && echo "Targets:" \
-	  && grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@$(PYTHON) tools/make_help.py $(MAKEFILE_LIST)
 
 $(STAMP_DIR):
 	@mkdir -p $(STAMP_DIR)
