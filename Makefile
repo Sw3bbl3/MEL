@@ -34,15 +34,15 @@ $(STAMP_DIR):
 $(VENV_STAMP): | $(STAMP_DIR)
 	@echo "Creating virtual environment in $(VENV_DIR)..."
 	@$(PYTHON) -m venv $(VENV_DIR)
-	@$(PIP_BIN) install --upgrade pip
+	@$(PYTHON_BIN) -m pip install --upgrade pip
 	@$(PYTHON) -c "import pathlib; pathlib.Path(r\"$@\").touch()"
 
 venv: $(VENV_STAMP) ## Create the local Python virtual environment with the latest pip.
 
 $(DEPS_STAMP): requirements.txt pyproject.toml | $(VENV_STAMP)
 	@echo "Installing project dependencies..."
-	@$(PIP_BIN) install -r requirements.txt
-	@$(PIP_BIN) install -e .
+	@$(PYTHON_BIN) -m pip install -r requirements.txt
+	@$(PYTHON_BIN) -m pip install -e .
 	@$(PYTHON) -c "import pathlib; pathlib.Path(r\"$@\").touch()"
 
 deps: $(DEPS_STAMP) ## Install or update project dependencies inside the virtual environment.
