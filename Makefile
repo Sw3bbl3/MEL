@@ -10,8 +10,8 @@ ifeq ($(OS),Windows_NT)
   SHELL := cmd.exe
   .SHELLFLAGS := /C
   PYTHON := python
-  PYTHON_BIN := $(VENV_DIR)/Scripts/python.exe
-  PIP_BIN := $(VENV_DIR)/Scripts/pip.exe
+  PYTHON_BIN := "$(VENV_DIR)/Scripts/python.exe"
+  PIP_BIN := "$(VENV_DIR)/Scripts/pip.exe"
 else
   PYTHON_BIN := $(VENV_DIR)/bin/python
   PIP_BIN := $(VENV_DIR)/bin/pip
